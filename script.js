@@ -1,3 +1,5 @@
+// need header here
+
 class MenuItem {
     // MenuItem class represents an individual menu item
 
