@@ -244,8 +244,7 @@ class Ui {
     constructor(menu, order) {
         this._order = order;
         this._menu = menu;
-        this.displayOrderTab = true; // Variable controlling the state of the display
-
+        this.displayOrderTab = true; // to conrol the state of the display
         // Create and set up GUI elements
         this.setupUI(menu, order);
     }
@@ -253,8 +252,9 @@ class Ui {
     setupUI(menu, order) {
         this.addEventListeners();
         this.info("Restaurant 351");
-        this.menu(menu, order);
+        this.populateMenu();
         Ui.invoiceNumber(order.invoiceNumber);
+        this.openTab('recipe');  // default to recipe tab
     }
 
     addEventListeners(order) {
@@ -263,7 +263,7 @@ class Ui {
         // tab buttons
         document.querySelectorAll('.tab-btn').forEach(button => {
             button.addEventListener('click', () => {
-                Ui.openTab(button.getAttribute("tab-id"));
+                this.openTab(button.getAttribute("tab-id"));
             });
         });
 
@@ -301,10 +301,10 @@ class Ui {
         });
     }
 
-    menu(menuInstance, orderInstance) {
+    populateMenu() {
         // generate items in menu as figures in menu div
         let frag = document.createDocumentFragment();
-        menuInstance.menu.forEach(item => {
+        this._menu.menu.forEach(item => {
             let menuElement = `<img src="${item.image}" alt="${item.description}"
             class="menu-img" style="width: 150px; height: 150px;">
             <figcaption>${item.description}</figcaption>
@@ -324,7 +324,7 @@ class Ui {
 
         document.querySelectorAll(".menu-item").forEach(button => {
             button.addEventListener('click', () => {
-                orderInstance.selectMenuItem(1, button.getAttribute("data-sku"));
+                this._order.selectMenuItem(1, button.getAttribute("data-sku"));
             })
         })
     }
@@ -333,7 +333,8 @@ class Ui {
         document.getElementById('invoice-number').textContent = `Invoice# ${invoiceNumber}`
     }
 
-    static openTab(tabName) {
+    openTab(tabName) {
+        console.log(tabName);
         // Declare all variables
         var i, tabcontent, tablinks;
 
@@ -343,16 +344,16 @@ class Ui {
           tabcontent[i].style.display = "none";
         }
 
-        // Get all elements with class="tab-btn" and remove the class "active"
+        // Remove "active" class from all tab buttons
         tablinks = document.getElementsByClassName("tab-btn");
         for (i = 0; i < tablinks.length; i++) {
-          tablinks[i].className = tablinks[i].className.replace(" active", "");
+          tablinks[i].classList.remove("active");
         }
 
-        // Show the current tab, and add an "active" class to the button that opened the tab
         const tab = document.getElementById(tabName);
-        tab.style.display = "flex";
-        tab.className += " active";
+        tab.style.display = "flex";  // Show the current tab
+        // add an "active" class to the button that opened the tab
+        document.querySelector(`[tab-id=${tabName}]`).classList.add("active");
     }
 
     static receiptDetails(orderInstance) {
@@ -538,8 +539,11 @@ Program starts here
 Order has a menu
 Recipe has a menu
 */
-const menu = new Menu();
-const order = new Order();
-mockData();  // get restaurant data
-order.generateInvoiceNumber();  // instantiate invoice number
-const ui = new Ui(menu, order);
+const menu = new Menu();  // empty menu
+const order = new Order();  // empty order
+
+mockData();  // populate menu and order with mock data
+// instantiate invoice number - could be done in order constructor
+order.generateInvoiceNumber();  
+
+const ui = new Ui(menu, order);  // set up user interface
