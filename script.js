@@ -1,3 +1,5 @@
+// need header here
+
 // second pi version
 class MenuItem {
     // MenuItem class represents an individual menu item
@@ -31,12 +33,9 @@ class Menu {
             currItem.price = menuItem[2];
             currItem.taxRate = menuItem[3];
             currItem.image = menuItem[4];
+            currItem.recipe = menuItem[5];
             this._menuItems.push(currItem);
         });
-    }
-
-    showRecipe() {
-        // show a selected recipe
     }
 }
 
@@ -107,15 +106,6 @@ class Order {
             this.invoiceNumber = highest + 1;
         }
         Ui.invoiceNumber(this.invoiceNumber);
-    }
-
-    selectMenuItem(quantity, data) {
-        /*
-        if (? == 'recipe') {
-            showRecipe(data);
-        } else if(? == 'pos') {
-        */
-        this.addOrderLine(quantity, data);
     }
 
     addOrderLine(quantity, data) {
@@ -242,8 +232,7 @@ class Ui {
     constructor(menu, order) {
         this._order = order;
         this._menu = menu;
-        this.displayOrderTab = true; // Variable controlling the state of the display
-
+        this.tab = 'pos';  // to conrol the state of the display
         // Create and set up GUI elements
         this.setupUI(menu, order);
     }
@@ -251,8 +240,9 @@ class Ui {
     setupUI(menu, order) {
         this.addEventListeners();
         this.info("Restaurant 351");
-        this.menu(menu, order);
+        this.populateMenu();
         Ui.invoiceNumber(order.invoiceNumber);
+        this.openTab(this.tab);
     }
 
     addEventListeners(order) {
@@ -261,7 +251,7 @@ class Ui {
         // tab buttons
         document.querySelectorAll('.tab-btn').forEach(button => {
             button.addEventListener('click', () => {
-                Ui.openTab(button.getAttribute("tab-id"));
+                this.openTab(button.getAttribute("tab-id"));
             });
         });
 
@@ -292,17 +282,16 @@ class Ui {
     }
 
     info(name) {
-        console.log(name)
         // generate restaurant name in each restaurant name class
         document.querySelectorAll(".restaurant-name").forEach(element => {
             element.textContent = name;
         });
     }
 
-    menu(menuInstance, orderInstance) {
+    populateMenu() {
         // generate items in menu as figures in menu div
         let frag = document.createDocumentFragment();
-        menuInstance.menu.forEach(item => {
+        this._menu.menu.forEach(item => {
             let menuElement = `<img src="${item.image}" alt="${item.description}"
             class="menu-img" style="width: 150px; height: 150px;">
             <figcaption>${item.description}</figcaption>
@@ -313,7 +302,7 @@ class Ui {
             node.className = "menu-item";
 
             // store item data in menu for easy access
-            let dataString = JSON.stringify({ sku : `${item.sku}`, description : `${item.description}`, price : `${item.price}`, taxRate : `${item.taxRate}`})
+            let dataString = JSON.stringify({ sku : `${item.sku}`, description : `${item.description}`, price : `${item.price}`, taxRate : `${item.taxRate}`, recipe : `${item.recipe}`})
             node.setAttribute("data-sku", dataString);  // add data to html element
             node.innerHTML = menuElement;
             frag.appendChild(node);
@@ -322,16 +311,25 @@ class Ui {
 
         document.querySelectorAll(".menu-item").forEach(button => {
             button.addEventListener('click', () => {
-                orderInstance.selectMenuItem(1, button.getAttribute("data-sku"));
+                this.selectMenuItem(1, button.getAttribute("data-sku"));
             })
         })
+    }
+
+    selectMenuItem(quantity, data) {
+        if (this.tab == 'pos') {
+            this._order.addOrderLine(quantity, data);
+        } else if (this.tab == 'recipe') {
+            this.showRecipe(JSON.parse(data).recipe);           
+        }
     }
 
     static invoiceNumber(invoiceNumber) {
         document.getElementById('invoice-number').textContent = `Invoice# ${invoiceNumber}`
     }
 
-    static openTab(tabName) {
+    openTab(tabName) {
+        this.tab = tabName;
         // Declare all variables
         var i, tabcontent, tablinks;
 
@@ -341,16 +339,16 @@ class Ui {
           tabcontent[i].style.display = "none";
         }
 
-        // Get all elements with class="tab-btn" and remove the class "active"
+        // Remove "active" class from all tab buttons
         tablinks = document.getElementsByClassName("tab-btn");
         for (i = 0; i < tablinks.length; i++) {
-          tablinks[i].className = tablinks[i].className.replace(" active", "");
+          tablinks[i].classList.remove("active");
         }
 
-        // Show the current tab, and add an "active" class to the button that opened the tab
         const tab = document.getElementById(tabName);
-        tab.style.display = "flex";
-        tab.className += " active";
+        tab.style.display = "flex";  // Show the current tab
+        // add an "active" class to the button that opened the tab
+        document.querySelector(`[tab-id=${tabName}]`).classList.add("active");
     }
 
     static receiptDetails(orderInstance) {
@@ -379,10 +377,10 @@ class Ui {
         document.querySelectorAll('.delete').forEach(button => {
             button.addEventListener('click', () => {
                 orderInstance.deleteOrderLine(parseInt(button.getAttribute("data-delete")));
-            })
-        })
+            });
+        });
     }
-
+    
     static summary(orderInstance) {
         // generate summary as values in summary ids
         const summary = orderInstance.getSummary();
@@ -390,6 +388,10 @@ class Ui {
         document.getElementById("tax-summary").textContent = Utilities.floatToString(summary.tax);
         document.getElementById("grandtotal-summary").textContent = Utilities.floatToString(summary.grandtotal);
         
+    }
+
+    showRecipe(recipe) {
+        document.getElementById("recipe").textContent = recipe;
     }
 
     static showPaypad() {
@@ -484,19 +486,19 @@ class Utilities {
 // MOCK DATA - simulate getting google sheet data
 
 const menuData = [
-    // description, price, tax rate, link to image
+    // description, price, tax rate, link to image, recipe
     [101, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg', 'text of receipe 101'],
-    [102, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg'],
-    [103, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg'],
-    [104, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg'],
-    [105, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg'],
-    [106, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg'],
-    [107, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg'],
-    [108, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg'],
-    [109, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg'],
-    [110, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg'],
-    [111, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg'],
-    [112, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg'],
+    [102, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg', 'text of receipe 102'],
+    [103, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg', 'text of receipe 103'],
+    [104, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg', 'text of receipe 104'],
+    [105, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg', 'text of receipe 105'],
+    [106, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg', 'text of receipe 106'],
+    [107, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg', 'text of receipe 107'],
+    [108, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg', 'text of receipe 108'],
+    [109, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg', 'text of receipe 109'],
+    [110, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg', 'text of receipe 110'],
+    [111, 'Tuna Pasta With Tomato and Olives', 14.00, 0.05, 'https://www.simplyrecipes.com/thmb/o4jzrhkJ4QMKVKBjvh2nCZuryRI=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2014__06__tuna-pasta-tomato-olives-vertical-a-1700-3b7f922febf44a40b1765bf0149a21cc.jpg', 'text of receipe 111'],
+    [112, 'Tagliatelle with sausage meat bolognese', 12.00, 0.05, 'https://www.simplyrecipes.com/thmb/nQGdcRXq_x4wa3vboPx4r7ZBVPo=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/__opt__aboutcom__coeus__resources__content_migration__simply_recipes__uploads__2005__11__Bolognese-Sauce-LEAD-2-8bb9d39957474e3396eab141cce7be90.jpg', 'text of receipe 112'],
 ];
 
 const previousSalesData = [
@@ -536,8 +538,11 @@ Program starts here
 Order has a menu
 Recipe has a menu
 */
-const menu = new Menu();
-const order = new Order();
-mockData();  // get restaurant data
-order.generateInvoiceNumber();  // instantiate invoice number
-const ui = new Ui(menu, order);
+const menu = new Menu();  // empty menu
+const order = new Order();  // empty order
+
+mockData();  // populate menu and order with mock data
+// instantiate invoice number - could be done in order constructor
+order.generateInvoiceNumber();  
+
+const ui = new Ui(menu, order);  // set up user interface
